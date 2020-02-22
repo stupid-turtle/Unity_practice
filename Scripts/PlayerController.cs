@@ -7,35 +7,63 @@ public class PlayerController : MonoBehaviour{
 
     Animator m_Animator;
     Rigidbody m_Rigidbody;
-    Vector3 m_Movement;
-    Quaternion m_Rotation = Quaternion.identity;
-    float speed = 15f;
+    float speed = 5f;
+    float turnSpeed = 15f;
+    float nowSpeed;
     float nextActionTime;
+    float nextEffectTime;
     bool isWalking;
     bool isAttack;
-    float attackLength = 1.2f;
-    public Slider attackSlider;
-    float stayLength = 1.2f - 0.25f;
-    bool isSkill;
-    float skillLength = 5.5f;
-    public Slider skillSlider;
-    public GameObject skillEffect;
-    public GameObject attackEffect;
+    bool isSkill1;
+    bool isSkill2;
+    bool isSkill3;
+    public Slider[] skillSliders;
 
+    int[] skillId = new int[20];
+    string[] skillName = new string[20];
+    GameObject[] skillEffect = new GameObject[20];
+    float[] skillDelay = new float[20];
+    float[] skillLength = new float[20];
+    float[] skillStayLength = new float[20];
+    float[] skillDisTime = new float[20];
+    int[] skillDamage = new int[20];
+    float[] skillCd = new float[20];
+    bool[] skillTag = new bool[20];
+    float[] skillNextTime = new float[20];
+    int runTime;
     public int totHealthPoint = 100;
     public int nowHealthPoint = 63;
+    public int addHealthPoint = 0;
     public int totMagicPoint = 80;
     public int nowMagicPoint = 60;
+    public int addMagicPoint = 0;
     public int attackPoint = 75;
     public int defensePoint = 50;
-    
-    private ParticleSystem xuanfengzhan;
+    int nowSkill;
 
     void Start(){
+        nowSkill = -1;
         m_Animator = GetComponent<Animator>();
         m_Rigidbody = GetComponent<Rigidbody>();
-        attackSlider.value = attackLength;
-        skillSlider.value = skillLength;
+        SkillConfig skills = Resources.Load("Skills/WarriorSkills") as SkillConfig;
+        if (skills) {
+            for (int i = 0; i < skills.skill_config_list.Count; i++) {
+                skill_data data = skills.skill_config_list[i];
+                skillId[i] = data.skill_id;
+                skillName[i] = data.skill_name;
+                skillEffect[i] = data.skill_effect;
+                skillDelay[i] = data.skill_delay;
+                skillLength[i] = data.skill_length;
+                skillStayLength[i] = data.skill_stay_length;
+                skillDamage[i] = data.skill_damage;
+                skillCd[i] = data.skill_cd;
+                skillTag[i] = false;
+                skillNextTime[i] = Time.time;
+            }
+        }
+        for (int i = 0; i < skillSliders.Length; i++) {
+            skillSliders[i].maxValue = skillSliders[i].value = skillCd[i];
+        }
     }
 
     void Update() {
@@ -43,60 +71,104 @@ public class PlayerController : MonoBehaviour{
     }
 
     void FixedUpdate() {
-        float keyboardHorizontal = Input.GetAxis("Horizontal");
-        float keyboardVertical = Input.GetAxis("Vertical");
         float easytouchHorizontal = ETCInput.GetAxis("Horizontal");
         float easytouchVertical = ETCInput.GetAxis("Vertical");
-
-        if (!isAttack) m_Movement.Set(keyboardHorizontal, 0f, keyboardVertical);
-        else m_Movement.Set(0f, 0f, 0f);
-        m_Movement.Normalize();
-        bool hasHorizontalInput = !Mathf.Approximately(keyboardHorizontal, 0f) || !Mathf.Approximately(easytouchHorizontal, 0f);
-        bool hasVerticalInput = !Mathf.Approximately(keyboardVertical, 0f) || !Mathf.Approximately(easytouchVertical, 0f);
+        float nowTime = Time.time;
+        if (isAttack || isSkill2 || isSkill3) {
+            nowSpeed = 0;
+        } else if (nowTime < skillDisTime[2]) {
+            nowSpeed = speed * 2;
+        } else {
+            nowSpeed = speed;
+        }
+        if (nowTime < skillDisTime[3] && runTime < 10) {
+            runTime++;
+            Debug.Log(gameObject.transform.forward);
+            //gameObject.transform.Translate(gameObject.transform.forward);
+            m_Rigidbody.MovePosition(gameObject.transform.position + gameObject.transform.forward);
+        }
+        ETCInput.SetAxisSensitivity("Horizontal", nowSpeed * Mathf.Abs(easytouchHorizontal));
+        ETCInput.SetAxisSensitivity("Vertical", nowSpeed * Mathf.Abs(easytouchVertical));
+        bool hasHorizontalInput = !Mathf.Approximately(easytouchHorizontal, 0f);
+        bool hasVerticalInput = !Mathf.Approximately(easytouchVertical, 0f);
         isWalking = hasHorizontalInput || hasVerticalInput;
         m_Animator.SetBool("IsWalking", isWalking);
-        if (Time.time >= nextActionTime) {
-            isAttack = false;
-            isSkill = false;
-            skillSlider.value = skillLength;
-            attackSlider.value = attackLength;
-        } else {
-            if (isAttack) {
-                attackSlider.value = nextActionTime - Time.time;
-            } else if (isSkill) {
-                skillSlider.value = nextActionTime - Time.time;
+        if (isWalking && !isAttack && !isSkill2 && !isSkill3) {
+            Vector3 forward = new Vector3(easytouchHorizontal, 0f, easytouchVertical);
+            forward.Normalize();
+            gameObject.transform.forward = forward;
+        }
+        if (Time.time >= nextActionTime && nowSkill != -1 && skillTag[nowSkill] == true) {
+            nowSkill = -1;
+            for (int i = 0; i < skillSliders.Length; i++) {
+                if (i == 0) isAttack = false;
+                else if (i == 1) isSkill1 = false;
+                else if (i == 2) isSkill2 = false;
+                else if (i == 3) isSkill3 = false;
+            }
+        }
+        for (int i = 0; i < skillSliders.Length; i++) {
+            if (Time.time >= skillNextTime[i]) {
+                skillTag[i] = false;
+                skillSliders[i].value = skillCd[i];
+            } else {
+                skillSliders[i].value = skillNextTime[i] - Time.time;
             }
         }
         Button attackButton = GameObject.Find("AttackButton").GetComponent<Button>();
-        Button skillButton = GameObject.Find("SkillButton").GetComponent<Button>();
+        Button skill1Button = GameObject.Find("Skill1Button").GetComponent<Button>();
+        Button skill2Button = GameObject.Find("Skill2Button").GetComponent<Button>();
+        Button skill3Button = GameObject.Find("Skill3Button").GetComponent<Button>();
         attackButton.onClick.AddListener(Attack);
-        skillButton.onClick.AddListener(Skill);
+        skill1Button.onClick.AddListener(Skill1);
+        skill2Button.onClick.AddListener(Skill2);
+        skill3Button.onClick.AddListener(Skill3);
         m_Animator.SetBool("IsAttack", isAttack);
-        m_Animator.SetBool("IsSkill", isSkill);
-        if (isAttack == true && Time.time >= nextActionTime - stayLength) {
-            Instantiate(attackEffect, gameObject.transform);
+        m_Animator.SetBool("IsSkill1", isSkill1);
+        m_Animator.SetBool("IsSkill2", isSkill2);
+        m_Animator.SetBool("IsSkill3", isSkill3);
+        if (nowSkill != -1) {
+            if (skillTag[nowSkill] == false) {
+                skillTag[nowSkill] = true;
+                nextActionTime = Time.time + skillLength[nowSkill];
+                nextEffectTime = Time.time + skillDelay[nowSkill];
+                skillNextTime[nowSkill] = Time.time + skillCd[nowSkill];
+                skillDisTime[nowSkill] = Time.time + skillStayLength[nowSkill];
+                runTime = 0;
+            }
         }
-        Vector3 desiredForward = Vector3.RotateTowards(transform.forward, m_Movement, speed * Time.deltaTime, 0f);
-        m_Rotation = Quaternion.LookRotation(desiredForward);
+        if (nowSkill != -1 && skillTag[nowSkill] == true && Time.time >= nextEffectTime) {
+            Instantiate(skillEffect[nowSkill], gameObject.transform);
+            nextEffectTime = nextActionTime;
+        }
     }
 
     void Attack() {
-        if (Time.time >= nextActionTime) {
+        if (Time.time >= nextActionTime && skillTag[0] == false) {
+            nowSkill = 0;
             isAttack = true;
-            nextActionTime = Time.time + attackLength;
         }
     }
 
-    void Skill() {
-        if (Time.time >= nextActionTime) {
-            isSkill = true;
-            nextActionTime = Time.time + skillLength;
-            Instantiate(skillEffect, gameObject.transform);
+    void Skill1() {
+        if (Time.time >= nextActionTime && skillTag[1] == false) {
+            nowSkill = 1;
+            isSkill1 = true;
         }
     }
 
-    void OnAnimatorMove() {
-        m_Rigidbody.MovePosition(m_Rigidbody.position + m_Movement * 0.1f);
-        m_Rigidbody.MoveRotation(m_Rotation);
+    void Skill2() {
+        if (Time.time >= nextActionTime && skillTag[2] == false) {
+            nowSkill = 2;
+            isSkill2 = true;
+        }
     }
+
+    void Skill3() {
+        if (Time.time >= nextActionTime && skillTag[3] == false) {
+            nowSkill = 3;
+            isSkill3 = true;
+        }
+    }
+    
 }
