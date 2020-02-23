@@ -5,12 +5,6 @@ using UnityEngine.UI;
 
 public class GameController : MonoBehaviour{
     
-    private int totHealthPoint;
-    private int nowHealthPoint;
-    private int totMagicPoint;
-    private int nowMagicPoint;
-    private int attackPoint;
-    private int defensePoint;
     public Text hpText;
     public Text mpText;
     public Text attackText;
@@ -19,27 +13,20 @@ public class GameController : MonoBehaviour{
 
     // Start is called before the first frame update
     void Start(){
-        playerController = new PlayerController();
-        totHealthPoint = playerController.totHealthPoint;
-        nowHealthPoint = playerController.nowHealthPoint;
-        totMagicPoint = playerController.totMagicPoint;
-        nowMagicPoint = playerController.nowMagicPoint;
-        attackPoint = playerController.attackPoint;
-        defensePoint = playerController.defensePoint;
-        hpText.text = "HP: " + nowHealthPoint + "/" + totHealthPoint;
-        mpText.text = "MP: " + nowMagicPoint + "/" + totMagicPoint;
-        attackText.text = "ATK: " + attackPoint;
-        defenseText.text = "DIT: " + defensePoint;
+        RoleConfig roles = Resources.Load("Role/Players") as RoleConfig;
+        role_data roleData = roles.role_config_list[0];
+
+        hpText.text = "HP: " + roleData.role_now_health_point + "/" + roleData.role_tot_health_point;
+        mpText.text = "MP: " + roleData.role_now_magic_point + "/" + roleData.role_tot_magic_point;
+        attackText.text = "ATK: " + roleData.role_attack_point;
+        defenseText.text = "DIT: " + roleData.role_defense_point;
     }
 
     // Update is called once per frame
     void Update() {
-        totHealthPoint = playerController.totHealthPoint;
-        nowHealthPoint = playerController.nowHealthPoint;
-        totMagicPoint = playerController.totMagicPoint;
-        nowMagicPoint = playerController.nowMagicPoint;
-        hpText.text = "HP: " + nowHealthPoint + "/" + totHealthPoint;
-        mpText.text = "MP: " + nowMagicPoint + "/" + totMagicPoint;
+        RoleConfig roles = Resources.Load("Role/Players") as RoleConfig;
+        role_data roleData = roles.role_config_list[0];
+        hpText.text = "HP: " + roleData.role_now_health_point + "/" + roleData.role_tot_health_point;
+        mpText.text = "MP: " + roleData.role_now_magic_point + "/" + roleData.role_tot_magic_point;
     }
-
 }

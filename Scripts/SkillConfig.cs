@@ -14,9 +14,10 @@ public class skill_data {
     public float skill_length;
     public float skill_stay_length;
     public int skill_damage;
+    public GameObject skill_box;
 }
 
-[CreateAssetMenu(menuName = "Editor/Config")]
+[CreateAssetMenu(menuName = "Editor/SkillConfig")]
 [Serializable]
 public class SkillConfig : ScriptableObject{
     // Start is called before the first frame update
